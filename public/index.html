@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+  <title>QuickChat</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="QuickChat">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#6366F1">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💬</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=1.5.1">
+  <!-- Firebase SDK v11 (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <div id="app" class="app-root">
+
+    <!-- Offline / Network Status Banner -->
+    <div id="connection-banner" class="connection-banner hidden" role="status" aria-live="polite">
+      <span class="connection-icon">⚡</span>
+      <span id="connection-text">Connecting to QuickChat...</span>
+    </div>
+
+    <!-- 1. Authentication Screen -->
+    <section id="auth-screen" class="screen auth-screen" aria-label="User Authentication">
+      <div class="auth-card">
+        <header class="auth-header">
+          <div class="brand">
+            <span class="brand-icon" aria-hidden="true">💬</span>
+            <h1 class="brand-title">QuickChat</h1>
+            <span class="app-version-badge" data-version="true">v1.5.1</span>
+          </div>
+          <p class="brand-subtitle">Lightweight instant messaging</p>
+        </header>
+
+        <nav class="auth-tabs" aria-label="Authentication Type">
+          <button type="button" id="login-tab" class="tab-btn active" role="tab" aria-selected="true" aria-controls="login-form">Login</button>
+          <button type="button" id="register-tab" class="tab-btn" role="tab" aria-selected="false" aria-controls="register-form">Register</button>
+        </nav>
+
+        <div id="auth-error" class="alert-error" role="alert" aria-live="polite" hidden></div>
+
+        <!-- Login Form -->
+        <form id="login-form" class="auth-form" aria-labelledby="login-tab">
+          <div class="form-group">
+            <label for="login-email">Email Address</label>
+            <input type="email" id="login-email" name="email" autocomplete="email" required placeholder="you@example.com">
+          </div>
+          <div class="form-group">
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" name="password" autocomplete="current-password" required placeholder="••••••••">
+          </div>
+          <button type="submit" id="login-btn" class="btn btn-primary btn-block">Sign In</button>
+        </form>
+
+        <!-- Register Form -->
+        <form id="register-form" class="auth-form hidden" aria-labelledby="register-tab">
+          <div class="form-group">
+            <label for="register-name">Display Name</label>
+            <input type="text" id="register-name" name="name" autocomplete="nickname" required placeholder="Alex Johnson">
+          </div>
+          <div class="form-group">
+            <label for="register-email">Email Address</label>
+            <input type="email" id="register-email" name="email" autocomplete="email" required placeholder="you@example.com">
+          </div>
+          <div class="form-group">
+            <label for="register-password">Password</label>
+            <input type="password" id="register-password" name="password" autocomplete="new-password" minlength="6" required placeholder="At least 6 characters">
+          </div>
+          <div class="form-group">
+            <label for="register-confirm-password">Confirm Password</label>
+            <input type="password" id="register-confirm-password" name="confirmPassword" autocomplete="new-password" minlength="6" required placeholder="Repeat password">
+          </div>
+          <button type="submit" id="register-btn" class="btn btn-primary btn-block">Create Account</button>
+        </form>
+
+        <div class="auth-divider">
+          <span>or</span>
+        </div>
+
+        <button type="button" id="google-signin-btn" class="btn btn-secondary btn-block btn-google">
+          <svg class="google-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          <span>Continue with Google</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- 2. Profile Setup Screen -->
+    <section id="profile-setup" class="screen profile-setup-screen hidden" aria-label="Profile Setup" hidden>
+      <div class="auth-card profile-card">
+        <header class="auth-header">
+          <div class="brand">
+            <span class="brand-icon" aria-hidden="true">💬</span>
+            <h1 class="brand-title">Welcome to QuickChat</h1>
+          </div>
+          <p class="brand-subtitle">Let everyone know who you are</p>
+        </header>
+
+        <div id="profile-error" class="alert-error" role="alert" aria-live="polite" hidden></div>
+
+        <form id="profile-form" class="auth-form">
+          <div class="form-group">
+            <label for="setup-display-name">Display Name</label>
+            <input type="text" id="setup-display-name" name="displayName" required placeholder="Your full name or handle">
+          </div>
+          <button type="submit" id="setup-continue-btn" class="btn btn-primary btn-block">Continue</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- 3. Chat Main Screen -->
+    <section id="chat-screen" class="screen chat-screen hidden" aria-label="Chat Dashboard" hidden>
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <header class="sidebar-header">
+          <div class="sidebar-brand">
+            <span class="brand-icon" aria-hidden="true">💬</span>
+            <span class="brand-name">QuickChat</span>
+            <span class="app-version-badge" data-version="true">v1.5.1</span>
+          </div>
+          <div class="header-actions">
+            <!-- User Profile Avatar (Click to open Profile & Settings) -->
+            <div id="user-avatar" class="avatar clickable-avatar" title="Profile & Settings" aria-label="Current User Profile" role="button" tabindex="0">U</div>
+          </div>
+        </header>
+
+        <div class="sidebar-search">
+          <label for="user-search" class="sr-only">Search conversations (Ctrl+K)</label>
+          <input type="search" id="user-search" placeholder="Search users... (Ctrl+K)" autocomplete="off">
+        </div>
+
+        <nav class="sidebar-user-list-wrapper" aria-label="Online Users">
+          <div class="list-section-title">Contacts</div>
+          <ul id="user-list" class="user-list" role="list">
+            <!-- Dynamic contact user items inserted here -->
+          </ul>
+        </nav>
+
+        <footer class="sidebar-footer">
+          <div class="user-info">
+            <span id="current-user-name" class="user-display-name">Loading user...</span>
+            <span class="user-version-label">QuickChat <span data-version="true">v1.5.1</span></span>
+          </div>
+          <div class="sidebar-footer-actions">
+            <button type="button" id="settings-btn" class="btn btn-secondary btn-sm btn-footer-settings" title="Profile & Settings" aria-label="Open Settings">⚙️</button>
+            <button type="button" id="signout-btn" class="btn btn-logout" aria-label="Sign out of account">Sign Out</button>
+          </div>
+        </footer>
+      </aside>
+
+      <!-- Main Chat Area -->
+      <main class="chat-area">
+        <!-- Active Chat Header -->
+        <header id="chat-header" class="chat-header" hidden>
+          <div class="chat-header-user">
+            <button type="button" id="back-btn" class="chat-back-btn" aria-label="Back to contacts">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <div id="active-contact-avatar" class="avatar">?</div>
+            <div class="chat-header-meta">
+              <h2 id="chat-contact-name" class="active-contact-name">Select Contact</h2>
+              <div class="active-contact-status-wrapper">
+                <span class="active-contact-status">
+                  <span class="status-dot online" aria-hidden="true"></span>
+                  <span id="chat-contact-status" class="contact-status-text">Online</span>
+                </span>
+                <!-- Typing Indicator -->
+                <span id="typing-indicator" class="typing-indicator hidden" aria-live="polite">
+                  <span class="typing-dots"><span></span><span></span><span></span></span>
+                  <span id="typing-name">typing...</span>
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-header-actions">
+            <!-- In-chat search toggle -->
+            <button type="button" id="search-chat-btn" class="btn-action-icon" title="Search messages in chat" aria-label="Search conversation">🔍</button>
+            <!-- Block contact button -->
+            <button type="button" id="block-contact-btn" class="btn-action-icon" title="Block user" aria-label="Block contact">🚫</button>
+            <!-- Export chat transcript -->
+            <button type="button" id="export-chat-btn" class="btn-action-icon" title="Export conversation transcript" aria-label="Export chat transcript">📥</button>
+          </div>
+        </header>
+
+        <!-- Blocked Contact Notice Banner -->
+        <div id="blocked-banner" class="blocked-banner hidden" role="alert">
+          <span>🚫 You have blocked this user. Unblock them to continue chatting.</span>
+          <button type="button" id="unblock-btn" class="btn-unblock-banner">Unblock</button>
+        </div>
+
+        <!-- In-Chat Search Bar (collapsible) -->
+        <div id="chat-search-bar" class="chat-search-bar hidden">
+          <div class="chat-search-input-wrapper">
+            <span class="chat-search-icon" aria-hidden="true">🔍</span>
+            <input type="search" id="chat-search-input" placeholder="Search in this conversation... (Enter/Shift+Enter to navigate)" autocomplete="off">
+            <span id="chat-search-count" class="chat-search-count"></span>
+            <button type="button" id="chat-search-prev" class="chat-search-nav-btn hidden" title="Previous match (Shift+Enter)" aria-label="Previous match">▲</button>
+            <button type="button" id="chat-search-next" class="chat-search-nav-btn hidden" title="Next match (Enter)" aria-label="Next match">▼</button>
+            <button type="button" id="chat-search-close" class="chat-search-close-btn" aria-label="Close search">&times;</button>
+          </div>
+        </div>
+
+        <!-- Pinned Message Bar (collapsible) -->
+        <div id="pinned-message-bar" class="pinned-message-bar hidden" role="region" aria-label="Pinned message">
+          <div class="pinned-indicator" aria-hidden="true">📌</div>
+          <div class="pinned-content" id="pinned-msg-trigger" title="Click to view message">
+            <span class="pinned-sender" id="pinned-sender">Pinned message</span>:
+            <span class="pinned-text" id="pinned-text">...</span>
+          </div>
+          <button type="button" id="unpin-msg-btn" class="unpin-btn" title="Unpin message" aria-label="Unpin message">&times;</button>
+        </div>
+
+        <!-- Empty State (No contact selected) -->
+        <div id="empty-state" class="empty-state">
+          <div class="empty-state-icon" aria-hidden="true">💬</div>
+          <h3>Select a conversation to start messaging</h3>
+          <p>Choose an online user from the sidebar to begin chatting in real-time.</p>
+        </div>
+
+        <!-- Messages History View -->
+        <section id="messages" class="messages-container" aria-label="Chat Message History" hidden>
+          <!-- Dynamic message bubbles inserted here -->
+        </section>
+
+        <!-- Floating Scroll to Bottom Button -->
+        <button type="button" id="scroll-bottom-btn" class="scroll-bottom-btn hidden" title="Scroll to bottom" aria-label="Scroll to newest messages">
+          <span class="scroll-arrow">↓</span>
+          <span id="new-msg-badge" class="scroll-new-badge hidden">New</span>
+        </button>
+
+        <!-- Message Input Box & Drawers -->
+        <footer id="chat-input-area" class="chat-input-area" hidden>
+          <!-- Emoji Picker Drawer (collapsible) -->
+          <div id="emoji-drawer" class="emoji-drawer hidden" role="dialog" aria-label="Emoji Picker">
+            <div class="emoji-drawer-header">
+              <span class="emoji-drawer-title">Choose Emoji</span>
+              <button type="button" id="emoji-drawer-close" class="emoji-drawer-close-btn" aria-label="Close emoji picker">&times;</button>
+            </div>
+            <div class="emoji-drawer-grid" id="emoji-grid">
+              <!-- Emojis injected dynamically -->
+            </div>
+          </div>
+
+          <!-- Quoted Message Reply Bar (collapsible) -->
+          <div id="reply-preview-bar" class="reply-preview-bar hidden" role="status" aria-label="Replying to message">
+            <div class="reply-preview-left">
+              <span class="reply-preview-icon" aria-hidden="true">↩️</span>
+              <div class="reply-preview-content">
+                <span class="reply-preview-sender">Replying to <strong id="reply-to-name">User</strong></span>
+                <span class="reply-preview-text" id="reply-to-text">Message preview...</span>
+              </div>
+            </div>
+            <button type="button" id="cancel-reply-btn" class="cancel-reply-btn" title="Cancel reply" aria-label="Cancel reply">&times;</button>
+          </div>
+
+          <!-- Editing Message Bar (collapsible) -->
+          <div id="edit-preview-bar" class="edit-preview-bar hidden" role="status" aria-label="Editing message">
+            <div class="edit-preview-left">
+              <span class="edit-preview-icon" aria-hidden="true">✏️</span>
+              <div class="edit-preview-content">
+                <span class="edit-preview-sender">Editing message</span>
+                <span class="edit-preview-text" id="edit-preview-text">Old message content...</span>
+              </div>
+            </div>
+            <button type="button" id="cancel-edit-btn" class="cancel-reply-btn" title="Cancel edit" aria-label="Cancel edit">&times;</button>
+          </div>
+
+          <!-- Image Preview Tray (collapsible) -->
+          <div id="image-preview-tray" class="image-preview-tray hidden" role="region" aria-label="Image to send">
+            <div class="image-preview-card">
+              <img id="image-preview-thumb" src="" alt="Image preview">
+              <button type="button" id="remove-image-btn" class="remove-image-btn" title="Remove image" aria-label="Remove image">&times;</button>
+            </div>
+            <span class="image-preview-caption">Image attached & ready to send</span>
+          </div>
+
+          <!-- Document / File Preview Tray (collapsible) -->
+          <div id="doc-preview-tray" class="doc-preview-tray hidden" role="region" aria-label="Document to send">
+            <div class="doc-preview-card">
+              <span class="doc-preview-icon" id="doc-preview-icon" aria-hidden="true">📄</span>
+              <div class="doc-preview-info">
+                <span class="doc-preview-name" id="doc-preview-name">document.pdf</span>
+                <span class="doc-preview-size" id="doc-preview-size">0 KB</span>
+              </div>
+              <button type="button" id="remove-doc-btn" class="remove-image-btn" title="Remove file" aria-label="Remove file">&times;</button>
+            </div>
+            <span class="image-preview-caption">File attached & ready to send</span>
+          </div>
+
+          <!-- Voice Recording Bar (collapsible) -->
+          <div id="voice-recording-bar" class="voice-recording-bar hidden" role="region" aria-label="Voice recording active">
+            <div class="voice-recording-indicator">
+              <span class="recording-pulse" aria-hidden="true"></span>
+              <span class="recording-label">Recording audio...</span>
+              <span id="recording-timer" class="recording-timer">0:00</span>
+            </div>
+            <div class="voice-recording-actions">
+              <button type="button" id="cancel-voice-btn" class="btn-voice-cancel" title="Cancel recording" aria-label="Cancel recording">✕</button>
+              <button type="button" id="send-voice-btn" class="btn-voice-send" title="Send voice message" aria-label="Send voice message">✔</button>
+            </div>
+          </div>
+
+          <!-- Main Message Form -->
+          <form id="message-form" class="message-form" autocomplete="off">
+            <button type="button" id="emoji-picker-btn" class="btn-action-icon btn-emoji-toggle" title="Insert Emoji" aria-label="Emoji Picker">😊</button>
+            <!-- Image Attachment Button & File Input -->
+            <button type="button" id="attach-image-btn" class="btn-action-icon btn-attach" title="Attach Image or Photo" aria-label="Attach Image">📷</button>
+            <input type="file" id="image-file-input" accept="image/*" hidden>
+            
+            <!-- Document / File Attachment Button & Input -->
+            <button type="button" id="attach-doc-btn" class="btn-action-icon btn-attach-doc" title="Attach Document or File" aria-label="Attach Document">📎</button>
+            <input type="file" id="doc-file-input" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar,.tar,.gz,.json" hidden>
+
+            <label for="message-input" class="sr-only">Type a message</label>
+            <input type="text" id="message-input" placeholder="Type a message (or paste an image/file)..." autocomplete="off">
+            
+            <!-- Voice Audio Record Button -->
+            <button type="button" id="voice-record-btn" class="btn-action-icon btn-mic" title="Record Voice Message" aria-label="Record Voice Message">🎤</button>
+            
+            <button type="submit" id="send-btn" class="btn btn-send" aria-label="Send message">
+              <span aria-hidden="true">➤</span>
+            </button>
+          </form>
+        </footer>
+      </main>
+    </section>
+
+    <!-- 4. Profile & Settings Modal -->
+    <div id="settings-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h2 id="settings-title" class="modal-title">Profile & Settings</h2>
+          <button type="button" id="settings-close-btn" class="modal-close-btn" aria-label="Close settings">&times;</button>
+        </header>
+
+        <!-- Segmented Tab Navigation: Profile vs Settings -->
+        <nav class="settings-modal-tabs" aria-label="Profile and Settings Navigation">
+          <button type="button" id="settings-tab-profile-btn" class="settings-tab-btn active" role="tab" aria-selected="true" aria-controls="settings-profile-panel">👤 Profile</button>
+          <button type="button" id="settings-tab-options-btn" class="settings-tab-btn" role="tab" aria-selected="false" aria-controls="settings-options-panel">⚙️ Settings</button>
+        </nav>
+
+        <form id="settings-form" class="modal-body">
+          <!-- 1. Profile Tab Panel -->
+          <div id="settings-profile-panel" class="settings-tab-panel" role="tabpanel" aria-labelledby="settings-tab-profile-btn">
+            <div class="settings-avatar-section">
+              <div id="settings-avatar-preview" class="avatar avatar-large">U</div>
+              <div class="settings-avatar-actions">
+                <label for="settings-avatar-upload" class="btn btn-secondary btn-sm upload-label">Upload Photo</label>
+                <input type="file" id="settings-avatar-upload" accept="image/*" hidden>
+                <button type="button" id="settings-avatar-reset" class="btn btn-ghost btn-sm">Reset</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="settings-display-name">Display Name</label>
+              <input type="text" id="settings-display-name" required placeholder="Your name or handle">
+            </div>
+
+            <div class="form-group">
+              <label for="settings-status-bio">Status / Bio</label>
+              <input type="text" id="settings-status-bio" maxlength="60" placeholder="What's on your mind?">
+            </div>
+
+            <div class="status-presets">
+              <span class="status-presets-label">Quick status:</span>
+              <div class="status-preset-chips">
+                <button type="button" class="preset-chip" data-status="👋 Available">👋 Available</button>
+                <button type="button" class="preset-chip" data-status="💼 In a meeting">💼 In a meeting</button>
+                <button type="button" class="preset-chip" data-status="🎧 Focusing">🎧 Focusing</button>
+                <button type="button" class="preset-chip" data-status="⚡ Deep work">⚡ Deep work</button>
+                <button type="button" class="preset-chip" data-status="🏖️ Away">🏖️ Away</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Settings Tab Panel (All action buttons organized under Settings) -->
+          <div id="settings-options-panel" class="settings-tab-panel hidden" role="tabpanel" aria-labelledby="settings-tab-options-btn">
+            <!-- Appearance / Theme -->
+            <div class="settings-action-card">
+              <div class="settings-action-info">
+                <strong>Appearance & Theme</strong>
+                <small>Switch between dark and light interface modes</small>
+              </div>
+              <button type="button" id="theme-toggle-btn" class="btn btn-secondary btn-sm" title="Toggle dark/light mode">🌙 Dark Mode</button>
+            </div>
+
+            <!-- Starred Messages Vault -->
+            <div class="settings-action-card">
+              <div class="settings-action-info">
+                <strong>Starred Messages</strong>
+                <small>View your saved and bookmarked messages</small>
+              </div>
+              <button type="button" id="starred-btn" class="btn btn-secondary btn-sm" title="Starred Messages">⭐ View Starred</button>
+            </div>
+
+            <!-- Notification Sound -->
+            <div class="settings-action-card">
+              <div class="settings-action-info">
+                <strong>Notification Sound</strong>
+                <small>Play alert chime when receiving messages</small>
+              </div>
+              <div class="settings-action-controls">
+                <button type="button" id="sound-toggle-btn" class="btn btn-secondary btn-sm" title="Toggle notification sound">🔊 Sound On</button>
+                <input type="checkbox" id="settings-sound-toggle" class="setting-checkbox sr-only" checked>
+              </div>
+            </div>
+
+            <!-- Desktop Notifications -->
+            <label class="setting-toggle-row">
+              <span class="toggle-text">
+                <strong>Desktop Notifications</strong>
+                <small>Native browser alerts when messages arrive</small>
+              </span>
+              <input type="checkbox" id="settings-desktop-notifs" class="setting-checkbox">
+            </label>
+
+            <!-- Chat Wallpaper -->
+            <div class="settings-prefs-group">
+              <span class="settings-section-label">Chat Wallpaper</span>
+              <div class="wallpaper-options" id="wallpaper-picker">
+                <button type="button" class="wallpaper-chip active" data-wallpaper="default">Default</button>
+                <button type="button" class="wallpaper-chip" data-wallpaper="doodles">Doodles</button>
+                <button type="button" class="wallpaper-chip" data-wallpaper="dots">Dots</button>
+                <button type="button" class="wallpaper-chip" data-wallpaper="sunset">Sunset</button>
+                <button type="button" class="wallpaper-chip" data-wallpaper="carbon">Carbon</button>
+              </div>
+            </div>
+          </div>
+
+          <footer class="modal-footer">
+            <button type="button" id="settings-cancel-btn" class="btn btn-secondary">Cancel</button>
+            <button type="submit" id="settings-save-btn" class="btn btn-primary">Save Changes</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- 5. Fullscreen Image Lightbox Modal -->
+    <div id="image-modal" class="image-lightbox-modal hidden" role="dialog" aria-modal="true" aria-label="Enlarged image view">
+      <button type="button" id="image-modal-close" class="image-modal-close-btn" aria-label="Close image preview">&times;</button>
+      <img id="image-modal-img" src="" alt="Enlarged photo preview">
+    </div>
+
+    <!-- 6. Starred / Saved Messages Modal -->
+    <div id="starred-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="starred-modal-title">
+      <div class="modal-card modal-card-wide">
+        <header class="modal-header">
+          <div class="modal-title-with-icon">
+            <span aria-hidden="true">⭐</span>
+            <h2 id="starred-modal-title" class="modal-title">Starred Messages</h2>
+          </div>
+          <button type="button" id="starred-modal-close" class="modal-close-btn" aria-label="Close starred messages">&times;</button>
+        </header>
+        <div class="modal-body">
+          <div class="starred-search-bar">
+            <input type="search" id="starred-search-input" placeholder="Filter starred messages..." autocomplete="off">
+          </div>
+          <div id="starred-messages-list" class="starred-messages-list">
+            <!-- Injected dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. Forward Message Modal -->
+    <div id="forward-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="forward-modal-title">
+      <div class="modal-card">
+        <header class="modal-header">
+          <div class="modal-title-with-icon">
+            <span aria-hidden="true">⏩</span>
+            <h2 id="forward-modal-title" class="modal-title">Forward Message</h2>
+          </div>
+          <button type="button" id="forward-modal-close" class="modal-close-btn" aria-label="Close forward dialog">&times;</button>
+        </header>
+        <div class="modal-body">
+          <div class="forward-preview-box" id="forward-preview-box">
+            <span class="forward-preview-label">Forwarding:</span>
+            <span class="forward-preview-snippet" id="forward-preview-snippet">Message content preview...</span>
+          </div>
+          <div class="forward-search-bar">
+            <input type="search" id="forward-search-input" placeholder="Search contacts..." autocomplete="off">
+          </div>
+          <div class="list-section-title">Select Contact</div>
+          <ul id="forward-contact-list" class="forward-contact-list" role="list">
+            <!-- Contact list items injected dynamically -->
+          </ul>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Application Logic (placed at bottom of body to ensure complete DOM availability) -->
+  <script src="app.js?v=1.5.1"></script>
+</body>
+</html>
